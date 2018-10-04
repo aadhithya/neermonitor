@@ -1,6 +1,7 @@
 package com.fivesqrd.neer;
 
 import javax.ws.rs.*;
+import org.json.*;
 //import javax.ws.rs.Path;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -168,7 +169,7 @@ public class NeerMonitorApi {
  
 	@Path("/getDevices")
 	@GET
-	@Produces(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.TEXT_PLAIN)
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response getDevices(@QueryParam("userId") String userid) {
 		ArrayList device_list = new ArrayList<Device>();
@@ -182,39 +183,12 @@ public class NeerMonitorApi {
 			String query = "SELECT device_id,device_name,device_limit FROM `devices` WHERE user_id='"+userid+"'";
 			System.out.println(query);
 			ResultSet rrs = st.executeQuery(query);
-			/*while(rrs.next()) {
-				
-				String deviceid = rrs.getString(1);
-				String device_name = rrs.getString(2);
-				String start_date=null,end_date=null;
-				double limit=0,total_per_device=0;
-				System.out.println(deviceid+","+device_name);
-				String query1 = "SELECT `start_date`, `end_date`, `device_limit` FROM `devices` WHERE device_id='"+deviceid+"'";
-				System.out.println(query1);
-				ResultSet rs1 = st.executeQuery(query1);
-				if(rs1.next()) {
-					start_date = rs1.getString(1);
-					end_date = rs1.getString(2);
-					limit = rs1.getDouble(3);
-					System.out.println(start_date+","+end_date+","+limit);
-
-					//Get total per device
-					String query2 = "SELECT SUM(counter) FROM `device_usage` WHERE device_id='"+deviceid+"' AND start_time='"+date+"'";
-					System.out.println(query2);
-					ResultSet rs2 = st.executeQuery(query2);
-					if(rs2.next()) {
-					}
-					
-					total_per_device = rs2.getDouble(1);
-					System.out.println(total_per_device);
-					
-				}
-				device_list.add(new Device(device_name,deviceid,total_per_device,start_date,end_date,limit));
-			}
-			 rrs.close();*/
+			JSONObject device_list_json = new JSONObject();
 			while(rrs.next()) {
+				JSONObject device = new JSONObject();
 				String device_id= rrs.getString(1);
 				String device_name = rrs.getString(2);
+				device.put("name", device_name);
 				String start_date=null,end_date=null;
 				double limit=0.0, total_per_device=0.0;
 				String query1 = "SELECT `start_date`, `end_date`, `device_limit` FROM `devices` WHERE device_id='"+device_id+"'";
@@ -233,10 +207,13 @@ public class NeerMonitorApi {
 				if(rs2.next()) {
 					total_per_device = rs2.getDouble(1);
 				}
+				device.put("total", total_per_device);
+				device.put("limit", limit);
+				device_list_json.put(device_id,device);
 				device_list.add(new Device(device_name,device_id,total_per_device,start_date,end_date,limit));
 				}
 
-			return Response.ok().entity(device_list).header("Access-Control-Allow-Origin", "*")
+			return Response.ok().entity(device_list_json.toString()).header("Access-Control-Allow-Origin", "*")
 					//.header("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
 					.header("Access-Control-Allow-Headers", "X-Requested-With, origin, content-type")
 					.allow("OPTIONS").build();
