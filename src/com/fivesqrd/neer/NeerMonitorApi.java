@@ -47,8 +47,7 @@ public class NeerMonitorApi {
 		
 		//Get userId from the request, look up DB for the user's devices.
 		try {
-			Date date = new Date();
-			String mDate= new SimpleDateFormat("yyyy-MM-dd").format(date);
+			String mDate = getDate();
 			System.out.println(mDate);
 			Connection con = DBHandler.getConnection();
 			Statement st = con.createStatement();
@@ -173,19 +172,76 @@ public class NeerMonitorApi {
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response getDevices(@QueryParam("userId") String userid) {
 		ArrayList device_list = new ArrayList<Device>();
+		ArrayList device_list_tot = new ArrayList<Device>();
+		double total_usage = 0;
+		String date = getDate();
+
 		try {
 			Connection con = DBHandler.getConnection();
 			Statement st = con.createStatement();
-			String query = "SELECT device_id,device_name FROM `devices` WHERE user_id='"+userid+"'";
-			ResultSet rs = st.executeQuery(query);
-			while(rs.next()) {
-				device_list.add(new Device(rs.getString(2),rs.getString(1)));
+			String query = "SELECT device_id,device_name,device_limit FROM `devices` WHERE user_id='"+userid+"'";
+			System.out.println(query);
+			ResultSet rrs = st.executeQuery(query);
+			/*while(rrs.next()) {
+				
+				String deviceid = rrs.getString(1);
+				String device_name = rrs.getString(2);
+				String start_date=null,end_date=null;
+				double limit=0,total_per_device=0;
+				System.out.println(deviceid+","+device_name);
+				String query1 = "SELECT `start_date`, `end_date`, `device_limit` FROM `devices` WHERE device_id='"+deviceid+"'";
+				System.out.println(query1);
+				ResultSet rs1 = st.executeQuery(query1);
+				if(rs1.next()) {
+					start_date = rs1.getString(1);
+					end_date = rs1.getString(2);
+					limit = rs1.getDouble(3);
+					System.out.println(start_date+","+end_date+","+limit);
+
+					//Get total per device
+					String query2 = "SELECT SUM(counter) FROM `device_usage` WHERE device_id='"+deviceid+"' AND start_time='"+date+"'";
+					System.out.println(query2);
+					ResultSet rs2 = st.executeQuery(query2);
+					if(rs2.next()) {
+					}
+					
+					total_per_device = rs2.getDouble(1);
+					System.out.println(total_per_device);
+					
+				}
+				device_list.add(new Device(device_name,deviceid,total_per_device,start_date,end_date,limit));
 			}
+			 rrs.close();*/
+			while(rrs.next()) {
+				String device_id= rrs.getString(1);
+				String device_name = rrs.getString(2);
+				String start_date=null,end_date=null;
+				double limit=0.0, total_per_device=0.0;
+				String query1 = "SELECT `start_date`, `end_date`, `device_limit` FROM `devices` WHERE device_id='"+device_id+"'";
+				Statement st1 = con.createStatement();
+				ResultSet rs1 = st1.executeQuery(query1);
+				if(rs1.next()) {
+					start_date = rs1.getString(1);
+					end_date = rs1.getString(2);
+					limit = rs1.getDouble(3);
+					System.out.println(start_date+","+end_date+","+limit);
+				}
+				String query2 = "SELECT SUM(counter) FROM `device_usage` WHERE device_id='"+device_id+"' AND start_time='"+date+"'";
+				System.out.println(query2);
+				Statement st3 = con.createStatement();
+				ResultSet rs2 = st3.executeQuery(query2);
+				if(rs2.next()) {
+					total_per_device = rs2.getDouble(1);
+				}
+				device_list.add(new Device(device_name,device_id,total_per_device,start_date,end_date,limit));
+				}
+
 			return Response.ok().entity(device_list).header("Access-Control-Allow-Origin", "*")
 					//.header("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
 					.header("Access-Control-Allow-Headers", "X-Requested-With, origin, content-type")
 					.allow("OPTIONS").build();
 		}catch(Exception e) {
+			e.printStackTrace();
 			ResponseResult res = new ResponseResult("Error",e.getMessage());
 			return Response.ok().entity(res).header("Access-Control-Allow-Origin", "*")
 					//.header("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
@@ -292,6 +348,12 @@ public class NeerMonitorApi {
 			return daily_total;
 		}
 		
+	}
+
+	private String getDate() {
+		Date date = new Date();
+		String mDate= new SimpleDateFormat("yyyy-MM-dd").format(date);
+		return mDate;
 	}
 }
 
