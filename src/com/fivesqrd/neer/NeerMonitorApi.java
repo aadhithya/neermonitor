@@ -8,11 +8,10 @@ import javax.ws.rs.core.Response;
 
 import java.util.ArrayList;
 import java.util.Date;
-
-
-
+import java.util.Random;
 import java.sql.*;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 
 @Path("/neer")
 public class NeerMonitorApi {
@@ -292,12 +291,12 @@ public class NeerMonitorApi {
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
-	public Response getDeviceData(@QueryParam("fdate") String fdate, @QueryParam("tdate") String tdate) {
+	public Response getDeviceData(@QueryParam("deviceId") String deviceId, @QueryParam("fdate") String fdate, @QueryParam("tdate") String tdate) {
 		try {
 			ArrayList device_list = new ArrayList<DeviceData>();
 			Connection con = DBHandler.getConnection();
 			Statement st = con.createStatement();
-			String query = "Select  start_time, SUM(counter) FROM device_usage WHERE start_time BETWEEN '"+fdate+"' AND '"+tdate+"' GROUP BY start_time";
+			String query = "Select  start_time, SUM(counter) FROM device_usage WHERE device_id='"+deviceId+"' AND start_time BETWEEN '"+fdate+"' AND '"+tdate+"' GROUP BY start_time";
 			ResultSet rs = st.executeQuery(query);
 			while(rs.next()) {
 				String date = rs.getString(1);
@@ -366,6 +365,60 @@ public class NeerMonitorApi {
 		return mDate;
 	}
 	
+	@Path("/genDummy")
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response createDummyData() {
+		
+		generateDummyData();
+		
+		return Response.ok().entity("Dummy Data Inserted!").header("Access-Control-Allow-Origin", "*")
+				//.header("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
+				.header("Access-Control-Allow-Headers", "X-Requested-With, origin, content-type")
+				.allow("OPTIONS").build();
+	}
+	
+	private void generateDummyData() {
+		String users[] = {"tms18"};//{"frank123","muthu123","eren123","farzan12","adhi123", "tms18"};
+		String devices[] = {"neer401","neer402","neer403","neer404"};
+		
+		int count = 1;
+		LocalDate fdate;
+		LocalDate tdate = LocalDate.of(2018, 10, 05);
+		try {
+			Connection con = DBHandler.getConnection();
+			Statement st = con.createStatement();
+			Random rand = new Random();
+			for(fdate= LocalDate.of(2018,9,1); fdate.isBefore(tdate); fdate=fdate.plusDays(1)) {
+				for(String user : users) {
+					int times = rand.nextInt(16);
+					for(int i=0; i<times;i++) {
+						int device_id = rand.nextInt(4);
+						double rd = rand.nextDouble();
+						int cmult = rand.nextInt(60);
+						int tmult = rand.nextInt(30);
+						double counter = cmult * rd;
+						double temp = tmult * rd;
+						String query = "INSERT INTO `device_usage`(`device_id`,`start_time` ,`counter`, `temp`) VALUES ('"+devices[device_id]+"','"+fdate+"',"+counter+","+temp+")";
+						count++;
+						System.out.println(count+":  "+query+"\n");
+						st.execute(query);
+					}
+
+				}
+				System.out.println(fdate);
+			}
+			
+		}catch(Exception e) {
+			e.printStackTrace();
+		}
+		
+		
+		
+		
+		
+	}
 	
 }
 
