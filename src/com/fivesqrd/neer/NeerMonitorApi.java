@@ -287,6 +287,39 @@ public class NeerMonitorApi {
 				.allow("OPTIONS").build();
 	}
 
+	
+	@Path("/getDeviceData")
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response getDeviceData(@QueryParam("fdate") String fdate, @QueryParam("tdate") String tdate) {
+		try {
+			ArrayList device_list = new ArrayList<DeviceData>();
+			Connection con = DBHandler.getConnection();
+			Statement st = con.createStatement();
+			String query = "Select  start_time, SUM(counter) FROM device_usage WHERE start_time BETWEEN '"+fdate+"' AND '"+tdate+"' GROUP BY start_time";
+			ResultSet rs = st.executeQuery(query);
+			while(rs.next()) {
+				String date = rs.getString(1);
+				double total = rs.getDouble(2);
+				
+				device_list.add(new DeviceData(date,total));
+			}
+			return Response.ok().entity(device_list).header("Access-Control-Allow-Origin", "*")
+					//.header("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
+					.header("Access-Control-Allow-Headers", "X-Requested-With, origin, content-type")
+					.allow("OPTIONS").build();
+		}catch(Exception e) {
+			ResponseResult res = new ResponseResult("Error", e.getMessage());
+			return Response.ok().entity(res).header("Access-Control-Allow-Origin", "*")
+					//.header("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
+					.header("Access-Control-Allow-Headers", "X-Requested-With, origin, content-type")
+					.allow("OPTIONS").build();
+		}
+		
+		
+	}
+	
 	private void sendNotification() {
 		
 	}
@@ -332,5 +365,7 @@ public class NeerMonitorApi {
 		String mDate= new SimpleDateFormat("yyyy-MM-dd").format(date);
 		return mDate;
 	}
+	
+	
 }
 
