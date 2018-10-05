@@ -8,10 +8,11 @@ import javax.ws.rs.core.Response;
 
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Random;
+
+
+
 import java.sql.*;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
 
 @Path("/neer")
 public class NeerMonitorApi {
@@ -50,11 +51,13 @@ public class NeerMonitorApi {
 			String mDate = getDate();
 			System.out.println(mDate);
 			Connection con = DBHandler.getConnection();
-			Statement st = con.createStatement();
+			Statement st = con.createStatement();	
 			String query = "INSERT INTO `device_usage`(`device_id`,`start_time` ,`counter`, `temp`) VALUES ('"+deviceId+"','"+mDate+"',"+counter+","+temp+")";
 			st.execute(query);
 			ResponseResult rr = new ResponseResult("Success","Update successful.");
 			System.out.println(rr.getStatus()+","+rr.getMessage());
+			st.close();
+			con.close();
 			return Response.ok().entity(rr).header("Access-Control-Allow-Origin", "*")
 					//.header("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
 					.header("Access-Control-Allow-Headers", "X-Requested-With, origin, content-type")
@@ -95,12 +98,15 @@ public class NeerMonitorApi {
 			}else {
 				throw new Exception();
 			}
+			st.close();
+			con.close();
 			return Response.ok().entity(msg).header("Access-Control-Allow-Origin", "*")
 					//.header("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
 					.header("Access-Control-Allow-Headers", "X-Requested-With, origin, content-type")
 					.allow("OPTIONS").build();
 			}catch(Exception e) {
 				 res = new ResponseResult("Error",e.getMessage());
+				 
 			}
 		
 		
@@ -131,6 +137,8 @@ public class NeerMonitorApi {
 		Connection con = DBHandler.getConnection();
 		Statement st = con.createStatement();
 		res = new ResponseResult("Success", "User "+username+" added.");
+		st.close();
+		con.close();
 		}catch(Exception e) {
 			res = new ResponseResult("Error", e.getMessage());
 		}
@@ -211,7 +219,8 @@ public class NeerMonitorApi {
 				device_list_json.put(device_id,device);
 				device_list.add(new Device(device_name,device_id,total_per_device,start_date,end_date,limit));
 				}
-
+			st.close();
+			con.close();
 			return Response.ok().entity(device_list_json.toString()).header("Access-Control-Allow-Origin", "*")
 					//.header("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
 					.header("Access-Control-Allow-Headers", "X-Requested-With, origin, content-type")
@@ -253,6 +262,8 @@ public class NeerMonitorApi {
 			System.out.println(total_usage);
 			res = new ResponseResult("Success",""+total_usage);
 			System.out.println("Here...");
+			st.close();
+			con.close();
 		}catch(Exception e) {
 			res = new ResponseResult("Error",e.getMessage());	
 		}
@@ -276,7 +287,8 @@ public class NeerMonitorApi {
 			st.execute(query);
 			
 			res = new ResponseResult("Success", "Limit added.");
-			
+			st.close();
+			con.close();
 		}catch(Exception e) {
 			res = new ResponseResult("Error", e.getMessage());
 		}
@@ -293,6 +305,7 @@ public class NeerMonitorApi {
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response getDeviceData(@QueryParam("deviceId") String deviceId, @QueryParam("fdate") String fdate, @QueryParam("tdate") String tdate) {
 		try {
+			System.out.println(deviceId+","+fdate+"'"+tdate);
 			ArrayList device_list = new ArrayList<DeviceData>();
 			Connection con = DBHandler.getConnection();
 			Statement st = con.createStatement();
@@ -304,6 +317,8 @@ public class NeerMonitorApi {
 				
 				device_list.add(new DeviceData(date,total));
 			}
+			st.close();
+			con.close();
 			return Response.ok().entity(device_list).header("Access-Control-Allow-Origin", "*")
 					//.header("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
 					.header("Access-Control-Allow-Headers", "X-Requested-With, origin, content-type")
@@ -337,6 +352,8 @@ public class NeerMonitorApi {
 				double limit = rs.getDouble(3);
 				rem = limit - pgetTimedDeviceUsage(deviceid,fdate,tdate);
 			}
+			st.close();
+			con.close();
 			return rem;
 		}catch(Exception e){
 			return rem;
@@ -352,6 +369,8 @@ public class NeerMonitorApi {
 			ResultSet rs = st.executeQuery(query);
 			rs.next();
 			daily_total = rs.getDouble(1);
+			st.close();
+			con.close();
 			return daily_total;
 		}catch(Exception e) {
 			return daily_total;
@@ -365,60 +384,6 @@ public class NeerMonitorApi {
 		return mDate;
 	}
 	
-	@Path("/genDummy")
-	@GET
-	@Produces(MediaType.APPLICATION_JSON)
-	@Consumes(MediaType.APPLICATION_JSON)
-	public Response createDummyData() {
-		
-		generateDummyData();
-		
-		return Response.ok().entity("Dummy Data Inserted!").header("Access-Control-Allow-Origin", "*")
-				//.header("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT")
-				.header("Access-Control-Allow-Headers", "X-Requested-With, origin, content-type")
-				.allow("OPTIONS").build();
-	}
-	
-	private void generateDummyData() {
-		String users[] = {"tms18"};//{"frank123","muthu123","eren123","farzan12","adhi123", "tms18"};
-		String devices[] = {"neer401","neer402","neer403","neer404"};
-		
-		int count = 1;
-		LocalDate fdate;
-		LocalDate tdate = LocalDate.of(2018, 10, 05);
-		try {
-			Connection con = DBHandler.getConnection();
-			Statement st = con.createStatement();
-			Random rand = new Random();
-			for(fdate= LocalDate.of(2018,9,1); fdate.isBefore(tdate); fdate=fdate.plusDays(1)) {
-				for(String user : users) {
-					int times = rand.nextInt(16);
-					for(int i=0; i<times;i++) {
-						int device_id = rand.nextInt(4);
-						double rd = rand.nextDouble();
-						int cmult = rand.nextInt(60);
-						int tmult = rand.nextInt(30);
-						double counter = cmult * rd;
-						double temp = tmult * rd;
-						String query = "INSERT INTO `device_usage`(`device_id`,`start_time` ,`counter`, `temp`) VALUES ('"+devices[device_id]+"','"+fdate+"',"+counter+","+temp+")";
-						count++;
-						System.out.println(count+":  "+query+"\n");
-						st.execute(query);
-					}
-
-				}
-				System.out.println(fdate);
-			}
-			
-		}catch(Exception e) {
-			e.printStackTrace();
-		}
-		
-		
-		
-		
-		
-	}
 	
 }
 
